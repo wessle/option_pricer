@@ -27,6 +27,7 @@ def option():
         # max(spot-K, 0) since it's a call option
         l1.append([spot, (1-CP)*max(spot-K, 0) + CP*max(K-spot, 0)])
 
+    # backward induction to arrive at current option price
     for i in range(n):
         l0 = []
         k = len(l1) - 1
