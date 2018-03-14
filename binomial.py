@@ -7,10 +7,10 @@ def option():
     S = float(input("Current price: "))
     K = float(input("Strike: "))
     T = float(input("Expiration: "))
-    n = int(input("Number of time steps: "))
     sigma = float(input("Volatility: "))
     r = float(input("Risk-free interest rate: "))
     a = float(input("Continuous dividend rate: "))
+    n = int(input("Number of time steps: "))
 
     # declare time step length, upward move, downward move, and upward move probability
     t = T/n
