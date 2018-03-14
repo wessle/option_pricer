@@ -10,13 +10,15 @@ def option():
     n = int(input("Number of time steps: "))
     sigma = float(input("Volatility: "))
     r = float(input("Risk-free interest rate: "))
+    a = float(input("Continuous dividend rate: "))
 
     # declare time step length, upward move, downward move, and upward move probability
     t = T/n
 
+    # Cox, Ross, Rubinstein definition for u, d
     u = np.exp(sigma*np.sqrt(t))
     d = 1/u
-    p = (np.exp(r*t) - d)/(u - d)
+    p = (np.exp((r-a)*t) - d)/(u - d)
 
     # will use these to store adjacent time steps of the tree
     l0, l1 = [], []
@@ -34,7 +36,7 @@ def option():
 
         for j in range(k):
             spot = S*(u**(k-1-j))*(d**j)
-            price = np.exp(-t*r)*(p*l1[j][1] + (1-p)*l1[j+1][1])
+            price = np.exp(-r*t)*(p*l1[j][1] + (1-p)*l1[j+1][1])
             l0.append([spot, (1-CP)*max(price, EA*(spot - K)) + CP*max(price, EA*(K - spot))])
         l1 = l0
 

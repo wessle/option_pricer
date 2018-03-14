@@ -9,13 +9,14 @@ def bs():
     tau = float(input("Expiration: "))
     sigma = float(input("Volatility: "))
     r = float(input("Risk-free interest rate: "))
+    a = float(input("Continuous dividend rate: "))
 
-    d1 = (1/(sigma*np.sqrt(tau)))*(np.log(S/K) + (r+(sigma**2/2))*tau)
-    d2 = (1/(sigma*np.sqrt(tau)))*(np.log(S/K) + (r-(sigma**2/2))*tau)
+    d1 = (1/(sigma*np.sqrt(tau)))*(np.log(S/K) + (r-a+(sigma**2/2))*tau)
+    d2 = (1/(sigma*np.sqrt(tau)))*(np.log(S/K) + (r-a-(sigma**2/2))*tau)
 
     if CP == 0:
-        price = S*norm.cdf(d1) - K*np.exp(-r*tau)*norm.cdf(d2)
+        price = S*np.exp(-a*tau)*norm.cdf(d1) - K*np.exp(-r*tau)*norm.cdf(d2)
     else:
-        price = K*np.exp(-r*tau)*norm.cdf(-d2) - S*norm.cdf(-d1)
+        price = K*np.exp(-r*tau)*norm.cdf(-d2) - S*np.exp(-a*tau)*norm.cdf(-d1)
 
     return price
