@@ -1,6 +1,4 @@
 import numpy as np
-from operator import itemgetter
-
 
 # price a European or American call or put option
 def option():
