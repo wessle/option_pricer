@@ -1,7 +1,7 @@
 import numpy as np
 
 # price a European or American call or put option
-def option():
+def op():
     EA = int(input("Enter 0 for European, 1 for American: "))
     CP = int(input("Enter 0 for call, 1 for put: "))
     S = float(input("Current price: "))

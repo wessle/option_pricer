@@ -2,7 +2,7 @@ from scipy.stats import norm
 import numpy as np
 
 # use the Black-Scholes formula to price a European call or put
-def bs():
+def europ():
     CP = int(input("Enter 0 for call, 1 for put: "))
     S = float(input("Current price: "))
     K = float(input("Strike: "))
