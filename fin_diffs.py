@@ -39,13 +39,13 @@ def op():
     # of lower indices corresponding to higher up on the y-axis, just like
     # in the x-y plane
     def a(j):
-        return -0.5*r*(M-j)*t - 0.5*sig**2*(M-j)**2*t
+        return -0.5*(r-q)*(M-j)*t - 0.5*sig**2*(M-j)**2*t
 
     def b(j):
         return 1 + sig**2*(M-j)**2*t + r*t
 
     def c(j):
-        return 0.5*r*(M-j)*t - 0.5*sig**2*(M-j)**2*t
+        return 0.5*(r-q)*(M-j)*t - 0.5*sig**2*(M-j)**2*t
 
     # work backwards from the righthand side, updating grid column-by-column
     for i in reversed(range(1,N+1)):
