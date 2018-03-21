@@ -3,6 +3,7 @@
 #include <cmath>
 #include <array>
 #include <iomanip>
+#include <algorithm>
 
 double phi(double y);
 double bs(double values[]);
@@ -79,9 +80,91 @@ double bs(double values[])
     return price;
 }
 
+// helper functions for fdm
+double aj(int j, int M, float sig, float r, float q, float t) {
+    return -0.5*((r-q)*(M-j)*t - pow(sig*(M-j), 2)*t);
+}
+
+double bj(int j, int M, float sig, float r, float q, float t) {
+    return 1 + pow(sig*(M-j),2)*t + r*t;
+}
+
+double cj(int j, int M, float sig, float r, float q, float t) {
+    return 0.5*((r-q)*(M-j)*t - pow(sig*(M-j),2)*t);
+}
+
+// finite difference method
 double fdm(double values[])
 {
-    
+    // be careful when using M and N to make sure that doubles are returned
+    // when appropriate
+    double EA = values[1];
+    double CP = values[2];
+    double S = values[3];
+    double K = values[4];
+    double T = values[5];
+    double sig = values[6];
+    double r = values[7];
+    double q = values[8];
+    int M = values[9];
+    int N = values[10];
+
+    // mult will be used to determine the maximum stock price of the grid
+    int mult = 2;
+
+    // change M slightly to make it easier to recover option price at the end
+    M -= (M % mult);
+
+    double s = mult*S/M;
+    double t = T/N;
+
+    // initialize the grid with all zeros
+    double g[M+1][N+1];
+    for (int i=0; i<M+1; i++) {
+        for (int j=0; j<N+1; j++) {
+            g[i][j] = 0;
+        }
+    }
+
+    // set the boundary conditions corresponding to whether the option
+    // is a call or put
+    for (int i=0; i<N+1; i++) {
+        g[0][i] += (1-CP)*mult*S;
+        g[M][i] += CP*K;
+    }
+
+    for (int i=1; i<M; i++) {
+        g[i][N] = (1-CP)*std::max((M-i)*s-K, 0.0) + CP*std::max(K-(M-i)*s, 0.0);
+    }
+
+    // make sure the row corresponding to the current price actually
+    // contains the current price in the first column and the appropriate
+    // intrinsic value in the last column
+    g[M/mult][0] = S;
+    g[M/mult][N] = (1-CP)*std::max(S-K, 0.0) + CP*std::max(K-S, 0.0);
+
+    /* Here we update the grid column-by-column, moving right to left. We have
+    to solve a system of linear equations for each column, but we can perform
+    back substitution on the coefficient matrices to obtain the solutions,
+    which is much faster than inverting them. Think of A below as follows:
+    A = [B, b], where B is the square coefficient matrix and b is the vector
+    of right-hand side values. We are solving to obtain x = B^{-1}b. */
+
+    double A[M+1][M+2];
+
+    for (int i=N; i>=0; i--) {
+
+        // zero out A
+        for (int j=0; j<M+1; j++) {
+            for (int k=0; k<M+2; k++) {
+                A[j][k] = 0;
+            }
+        }
+
+
+    }
+
+
 }
 
 // copied this directly from John Cook at https://www.johndcook.com/blog/cpp_phi/
