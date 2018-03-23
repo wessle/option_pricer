@@ -14,9 +14,8 @@ def op():
     N = int(input("Number of time steps: "))
 
     # price and time step widths with mult*S as the max stock price
-    # must be careful here in case the strike is higher than mult*S
-    # mult can't be too large
-    mult = 2
+    # must be careful here
+    mult = 5
 
     # change M to make it easier to recover option price at the end
     M -= M % mult
@@ -29,16 +28,14 @@ def op():
     g = np.zeros((M+1, N+1))
 
     for i in range(N+1):
-        g[0][i] += (1-CP)*(Smax-K)
-
-    for i in range(N+1):
-        g[M][i] += CP*K
+        g[0][i] += (1-CP)*(Smax-K*np.exp(-(r-q)*(T-t*i)))
+        g[M][i] += CP*K*np.exp(-(r-q)*(T-t*i))
 
     for i in range(1, M):
         g[i][N] = (1-CP)*max((M-i)*s-K, 0) + CP*max(K-(M-i)*s, 0)
 
-    g[M//mult][0] = S
-    g[M//mult][N] = (1-CP)*max(S-K, 0) + CP*max(K-S, 0)
+    g[M - M//mult][0] = S
+    g[M - M//mult][N] = (1-CP)*max(S-K, 0) + CP*max(K-S, 0)
 
     # define the coefficients to be used in solving difference equations
     # note that we need to switch the j indices around: in my head I'm thinking
@@ -66,10 +63,8 @@ def op():
         f = np.linalg.solve(A, d)
         f = [ ( (1-CP)*max(f[k], EA*((M-k)*s - K)) + CP*(max(f[k], EA*(K-(M-k)*s))) ) for k in range(M+1)]
 
-        g[:,i-1] = f
-        g[0,i-1] = (1-CP)*(Smax-K)
-        g[M,i-1] = CP*K
+        g[1:M,i-1] = f[1:M]
 
-    np.set_printoptions(precision=3)
+    # np.set_printoptions(precision=3)
 
-    print(g)
+    print(g[M-M//mult][0])
