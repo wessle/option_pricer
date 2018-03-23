@@ -20,14 +20,20 @@ def op():
 
     # change M to make it easier to recover option price at the end
     M -= M % mult
+    Smax = mult*S
 
-    s = mult*S/M
+    s = Smax/M
     t = T/N
 
     # initialize the grid
     g = np.zeros((M+1, N+1))
-    g[0] = g[0] + (1-CP)*(mult*S-K)*np.ones((1, N+1))
-    g[M] = g[M] + CP*K*np.ones((1, N+1))
+
+    for i in range(N+1):
+        g[0][i] += (1-CP)*(Smax-K)
+
+    for i in range(N+1):
+        g[M][i] += CP*K
+
     for i in range(1, M):
         g[i][N] = (1-CP)*max((M-i)*s-K, 0) + CP*max(K-(M-i)*s, 0)
 
@@ -61,7 +67,9 @@ def op():
         f = [ ( (1-CP)*max(f[k], EA*((M-k)*s - K)) + CP*(max(f[k], EA*(K-(M-k)*s))) ) for k in range(M+1)]
 
         g[:,i-1] = f
-        g[0,i-1] = (1-CP)*(mult*S-K)
+        g[0,i-1] = (1-CP)*(Smax-K)
         g[M,i-1] = CP*K
 
-    print(g[M//mult][0])
+    np.set_printoptions(precision=3)
+
+    print(g)

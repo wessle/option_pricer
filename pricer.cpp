@@ -4,6 +4,10 @@
 #include <array>
 #include <iomanip>
 #include <algorithm>
+#include <Eigen/LU>
+
+using namespace std;
+using namespace Eigen;
 
 double phi(double y);
 double bs(double values[]);
@@ -47,9 +51,10 @@ int main()
     // close the parameters file
     options.close();
 
-    double price = bs(params);
+    double price1 = bs(params);
 
-    std::cout << std::setprecision(10) << price << "\n";
+    cout << price1 << "\n\n";
+    fdm(params);
 }
 
 // compute option price using Black-Scholes formulas
@@ -134,14 +139,14 @@ double fdm(double values[])
     }
 
     for (int i=1; i<M; i++) {
-        g[i][N] = (1-CP)*std::max((M-i)*s-K, 0.0) + CP*std::max(K-(M-i)*s, 0.0);
+        g[i][N] = (1-CP)*max((M-i)*s-K, 0.0) + CP*max(K-(M-i)*s, 0.0);
     }
 
     // make sure the row corresponding to the current price actually
     // contains the current price in the first column and the appropriate
     // intrinsic value in the last column
     g[M/mult][0] = S;
-    g[M/mult][N] = (1-CP)*std::max(S-K, 0.0) + CP*std::max(K-S, 0.0);
+    g[M/mult][N] = (1-CP)*max(S-K, 0.0) + CP*max(K-S, 0.0);
 
     /* Here we update the grid column-by-column, moving right to left. We have
     to solve a system of linear equations for each column, but we can perform
@@ -150,21 +155,42 @@ double fdm(double values[])
     A = [B, b], where B is the square coefficient matrix and b is the vector
     of right-hand side values. We are solving to obtain x = B^{-1}b. */
 
-    double A[M+1][M+2];
+    MatrixXd A(M+1, M+1);
+    VectorXd d(M+1);
+    VectorXd x(M+1);
 
-    for (int i=N; i>=0; i--) {
+    for (int i=N; i>0; i--) {
 
-        // zero out A
+        // set A equal to identity
+        A = MatrixXd::Identity(M+1,M+1);
+
         for (int j=0; j<M+1; j++) {
-            for (int k=0; k<M+2; k++) {
-                A[j][k] = 0;
-            }
+            d(j) = g[j][i];
         }
 
+        for (int j=1; j<M; j++) {
+            A(j,j-1) = aj(j, M, sig, r, q, t);
+            A(j,j) = bj(j, M, sig, r, q, t);
+            A(j,j+1) = cj(j, M, sig, r, q, t);
+        }
+
+        x = A.partialPivLu().solve(d);
+
+        for (int j=0; j<M+1; j++) {
+            x(j) = (1-CP)*max(x(j), EA*((M-j)*s - K)) + CP*(max(x(j), EA*(K-(M-j)*s)));
+        }
+
+        for (int j=1; j<M; j++) {
+            g[j][i-1] = x(j);
+        }
 
     }
 
+    // for (int i=0; i<M+1; i++) {
+    //     cout << g[i][0] << endl;
+    // }
 
+    cout << g[M/mult][0] << endl;
 }
 
 // copied this directly from John Cook at https://www.johndcook.com/blog/cpp_phi/
