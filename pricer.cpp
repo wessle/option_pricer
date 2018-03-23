@@ -52,9 +52,9 @@ int main()
     options.close();
 
     double price1 = bs(params);
+    double price2 = fdm(params);
 
-    cout << price1 << "\n\n";
-    fdm(params);
+    cout << price1 << ", " << price2 << "\n";
 }
 
 // compute option price using Black-Scholes formulas
@@ -115,12 +115,13 @@ double fdm(double values[])
     int N = values[10];
 
     // mult will be used to determine the maximum stock price of the grid
-    int mult = 2;
+    int mult = 5;
 
     // change M slightly to make it easier to recover option price at the end
     M -= (M % mult);
+    double Smax = mult*S;
 
-    double s = mult*S/M;
+    double s = Smax/M;
     double t = T/N;
 
     // initialize the grid with all zeros
@@ -134,19 +135,19 @@ double fdm(double values[])
     // set the boundary conditions corresponding to whether the option
     // is a call or put
     for (int i=0; i<N+1; i++) {
-        g[0][i] += (1-CP)*mult*S;
-        g[M][i] += CP*K;
+        g[0][i] += (1-CP)*(Smax - K*exp(-(r-q)*(T-t*i)));
+        g[M][i] += CP*K*exp(-(r-q)*(T-t*i));
     }
 
     for (int i=1; i<M; i++) {
-        g[i][N] = (1-CP)*max((M-i)*s-K, 0.0) + CP*max(K-(M-i)*s, 0.0);
+        g[i][N] = (1-CP)*std::max((M-i)*s-K, 0.0) + CP*std::max(K-(M-i)*s, 0.0);
     }
 
     // make sure the row corresponding to the current price actually
     // contains the current price in the first column and the appropriate
     // intrinsic value in the last column
-    g[M/mult][0] = S;
-    g[M/mult][N] = (1-CP)*max(S-K, 0.0) + CP*max(K-S, 0.0);
+    g[M - M/mult][0] = S;
+    g[M - M/mult][N] = (1-CP)*std::max(S-K, 0.0) + CP*std::max(K-S, 0.0);
 
     /* Here we update the grid column-by-column, moving right to left. We have
     to solve a system of linear equations for each column, but we can perform
@@ -177,7 +178,7 @@ double fdm(double values[])
         x = A.partialPivLu().solve(d);
 
         for (int j=0; j<M+1; j++) {
-            x(j) = (1-CP)*max(x(j), EA*((M-j)*s - K)) + CP*(max(x(j), EA*(K-(M-j)*s)));
+            x(j) = (1-CP)*std::max(x(j), EA*((M-j)*s - K)) + CP*(std::max(x(j), EA*(K-(M-j)*s)));
         }
 
         for (int j=1; j<M; j++) {
@@ -186,11 +187,7 @@ double fdm(double values[])
 
     }
 
-    // for (int i=0; i<M+1; i++) {
-    //     cout << g[i][0] << endl;
-    // }
-
-    cout << g[M/mult][0] << endl;
+    return g[M - M/mult][0];
 }
 
 // copied this directly from John Cook at https://www.johndcook.com/blog/cpp_phi/
