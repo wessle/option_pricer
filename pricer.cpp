@@ -3,15 +3,14 @@
 #include <cmath>
 #include <array>
 #include <iomanip>
-#include <algorithm>
-#include <Eigen/LU>
+#include <Eigen/QR>
 
 using namespace std;
 using namespace Eigen;
 
-double phi(double y);
-double bs(double values[]);
-double fdm(double values[]);
+float phi(float y);
+float bs(float values[]);
+float fdm(float values[]);
 
 int main()
 {
@@ -39,8 +38,8 @@ int main()
     9) number of price steps
     10) number of time steps */
 
-    double x;
-    double params[11];
+    float x;
+    float params[11];
 
     for (int i=0; i<11; i++)
     {
@@ -51,28 +50,29 @@ int main()
     // close the parameters file
     options.close();
 
-    double price1 = bs(params);
-    double price2 = fdm(params);
+    float price1 = bs(params);
+    float price2 = fdm(params);
 
-    cout << price1 << ", " << price2 << "\n";
+    cout << price1 << ", " << price2 << endl;
+
 }
 
 // compute option price using Black-Scholes formulas
-double bs(double values[])
+float bs(float values[])
 {
     // give the variables names that are easier to work with
     int CP = values[2];
-    double S = values[3];
-    double K = values[4];
-    double tau = values[5];
-    double sigma = values[6];
-    double r = values[7];
-    double a = values[8];
+    float S = values[3];
+    float K = values[4];
+    float tau = values[5];
+    float sigma = values[6];
+    float r = values[7];
+    float a = values[8];
 
     // declare the constants used in the B-S formula
-    double d1 = (1/(sigma*sqrt(tau)))*(log(S/K) + (r-a+(pow(sigma,2)/2))*tau);
-    double d2 = (1/(sigma*sqrt(tau)))*(log(S/K) + (r-a-(pow(sigma,2)/2))*tau);
-    double price;
+    float d1 = (1/(sigma*sqrt(tau)))*(log(S/K) + (r-a+(pow(sigma,2)/2))*tau);
+    float d2 = (1/(sigma*sqrt(tau)))*(log(S/K) + (r-a-(pow(sigma,2)/2))*tau);
+    float price;
 
     if (CP == 0) {
         price = S*exp(-a*tau)*phi(d1) - K*exp(-r*tau)*phi(d2);
@@ -86,31 +86,31 @@ double bs(double values[])
 }
 
 // helper functions for fdm
-double aj(int j, int M, float sig, float r, float q, float t) {
-    return -0.5*((r-q)*(M-j)*t - pow(sig*(M-j), 2)*t);
+float aj(int j, int M, float sig, float r, float q, float t) {
+    return -0.5*((r-q)*(M-j)*t + pow(sig*(M-j), 2)*t);
 }
 
-double bj(int j, int M, float sig, float r, float q, float t) {
+float bj(int j, int M, float sig, float r, float q, float t) {
     return 1 + pow(sig*(M-j),2)*t + r*t;
 }
 
-double cj(int j, int M, float sig, float r, float q, float t) {
+float cj(int j, int M, float sig, float r, float q, float t) {
     return 0.5*((r-q)*(M-j)*t - pow(sig*(M-j),2)*t);
 }
 
 // finite difference method
-double fdm(double values[])
+float fdm(float values[])
 {
-    // be careful when using M and N to make sure that doubles are returned
+    // be careful when using M and N to make sure that floats are returned
     // when appropriate
-    double EA = values[1];
-    double CP = values[2];
-    double S = values[3];
-    double K = values[4];
-    double T = values[5];
-    double sig = values[6];
-    double r = values[7];
-    double q = values[8];
+    float EA = values[1];
+    float CP = values[2];
+    float S = values[3];
+    float K = values[4];
+    float T = values[5];
+    float sig = values[6];
+    float r = values[7];
+    float q = values[8];
     int M = values[9];
     int N = values[10];
 
@@ -119,35 +119,31 @@ double fdm(double values[])
 
     // change M slightly to make it easier to recover option price at the end
     M -= (M % mult);
-    double Smax = mult*S;
+    float Smax = mult*S;
 
-    double s = Smax/M;
-    double t = T/N;
+    float s = Smax/M;
+    float t = T/N;
 
     // initialize the grid with all zeros
-    double g[M+1][N+1];
-    for (int i=0; i<M+1; i++) {
-        for (int j=0; j<N+1; j++) {
-            g[i][j] = 0;
-        }
-    }
+    MatrixXf g(M+1, N+1);
+    g.setZero();
 
     // set the boundary conditions corresponding to whether the option
     // is a call or put
     for (int i=0; i<N+1; i++) {
-        g[0][i] += (1-CP)*(Smax - K*exp(-(r-q)*(T-t*i)));
-        g[M][i] += CP*K*exp(-(r-q)*(T-t*i));
+        g(0, i) += (1-CP)*(Smax - K*exp(-(r-q)*(T-t*i)));
+        g(M, i) += CP*K*exp(-(r-q)*(T-t*i));
     }
 
     for (int i=1; i<M; i++) {
-        g[i][N] = (1-CP)*std::max((M-i)*s-K, 0.0) + CP*std::max(K-(M-i)*s, 0.0);
+        g(i, N) = (1-CP)*std::max((M-i)*s-K, (float)0.0) + CP*std::max(K-(M-i)*s, (float)0.0);
     }
 
     // make sure the row corresponding to the current price actually
     // contains the current price in the first column and the appropriate
     // intrinsic value in the last column
-    g[M - M/mult][0] = S;
-    g[M - M/mult][N] = (1-CP)*std::max(S-K, 0.0) + CP*std::max(K-S, 0.0);
+    g(M - M/mult, 0) = S;
+    g(M - M/mult, N) = (1-CP)*std::max(S-K, (float)0.0) + CP*std::max(K-S, (float)0.0);
 
     /* Here we update the grid column-by-column, moving right to left. We have
     to solve a system of linear equations for each column, but we can perform
@@ -156,18 +152,15 @@ double fdm(double values[])
     A = [B, b], where B is the square coefficient matrix and b is the vector
     of right-hand side values. We are solving to obtain x = B^{-1}b. */
 
-    MatrixXd A(M+1, M+1);
-    VectorXd d(M+1);
-    VectorXd x(M+1);
+    MatrixXf A(M+1, M+1);
+    VectorXf d(M+1);
+    VectorXf x(M+1);
 
     for (int i=N; i>0; i--) {
 
         // set A equal to identity
-        A = MatrixXd::Identity(M+1,M+1);
-
-        for (int j=0; j<M+1; j++) {
-            d(j) = g[j][i];
-        }
+        A = MatrixXf::Identity(M+1,M+1);
+        d = g.col(i);
 
         for (int j=1; j<M; j++) {
             A(j,j-1) = aj(j, M, sig, r, q, t);
@@ -175,31 +168,36 @@ double fdm(double values[])
             A(j,j+1) = cj(j, M, sig, r, q, t);
         }
 
-        x = A.partialPivLu().solve(d);
+        x = A.householderQr().solve(d);
 
         for (int j=0; j<M+1; j++) {
             x(j) = (1-CP)*std::max(x(j), EA*((M-j)*s - K)) + CP*(std::max(x(j), EA*(K-(M-j)*s)));
         }
 
-        for (int j=1; j<M; j++) {
-            g[j][i-1] = x(j);
-        }
+        // print out quantities in Ax = d to use in debugging
+        // cout << endl << A << endl << d << endl << x << endl;
 
+        g.col(i-1) = x;
+
+        // these two lines are inefficient and unnecessary -- find out how
+        // to get rid of them
+        g(0, i-1) = (1-CP)*(Smax - K*exp(-(r-q)*(T-t*i)));
+        g(M, i-1) = CP*K*exp(-(r-q)*(T-t*i));
     }
 
-    return g[M - M/mult][0];
+    return g(M - M/mult, 0);
 }
 
 // copied this directly from John Cook at https://www.johndcook.com/blog/cpp_phi/
-double phi(double x)
+float phi(float x)
 {
     // constants
-    double a1 =  0.254829592;
-    double a2 = -0.284496736;
-    double a3 =  1.421413741;
-    double a4 = -1.453152027;
-    double a5 =  1.061405429;
-    double p  =  0.3275911;
+    float a1 =  0.254829592;
+    float a2 = -0.284496736;
+    float a3 =  1.421413741;
+    float a4 = -1.453152027;
+    float a5 =  1.061405429;
+    float p  =  0.3275911;
 
     // Save the sign of x
     int sign = 1;
@@ -208,8 +206,8 @@ double phi(double x)
     x = fabs(x)/sqrt(2.0);
 
     // A&S formula 7.1.26
-    double t = 1.0/(1.0 + p*x);
-    double y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*exp(-x*x);
+    float t = 1.0/(1.0 + p*x);
+    float y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*exp(-x*x);
 
     return 0.5*(1.0 + sign*y);
 }

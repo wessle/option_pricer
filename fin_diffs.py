@@ -63,6 +63,9 @@ def op():
         f = np.linalg.solve(A, d)
         f = [ ( (1-CP)*max(f[k], EA*((M-k)*s - K)) + CP*(max(f[k], EA*(K-(M-k)*s))) ) for k in range(M+1)]
 
+        # print out A, d, and f used in Af = d to use in debugging
+        # print("\n\n", A, "\n\n", d, "\n\n", f)
+
         g[1:M,i-1] = f[1:M]
 
     # np.set_printoptions(precision=3)
