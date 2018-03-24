@@ -168,16 +168,46 @@ float fdm(float values[])
             A(j,j+1) = cj(j, M, sig, r, q, t);
         }
 
-        x = A.householderQr().solve(d);
+        // fast solution of equation Ax=d using special structure of A
+        double a;
+
+        // zero out the first column, which has only one other non-zero entry,
+        // and update RHS accordingly
+        d(1) -= A(1,0)*d(0);
+        A(1,0) = 0;
+
+        // normalize i,i-th entry, zero out everything below it, update RHS
+        for (int j=1; j<M; j++) {
+            a = 1/A(j,j);
+            A(j,j) *= a;
+            A(j,j+1) *= a;
+            d(j) *= a;
+
+            A(j+1,j+1) -= A(j+1,j)*A(j,j+1);
+            d(j+1) -= A(j+1,j)*d(j);
+
+            A(j+1,j) = 0;
+        }
+
+        // start process over, this time zeroing out the entries above the diagonal
+        d(M-1) -= A(M-1,M)*d(M);
+        A(M-1,M) = 0;
+
+        // to obtain the correct b we don't need to set A(i-1,i)=0, but since
+        // we are reusing A we might as well reset it to the identity
+        for (int j=M-1; j>0; j--) {
+            d(j-1) -= A(j-1,j)*d(j);
+            A(j-1,j) = 0;
+        }
 
         for (int j=0; j<M+1; j++) {
-            x(j) = (1-CP)*std::max(x(j), EA*((M-j)*s - K)) + CP*(std::max(x(j), EA*(K-(M-j)*s)));
+            d(j) = (1-CP)*std::max(d(j), EA*((M-j)*s - K)) + CP*(std::max(d(j), EA*(K-(M-j)*s)));
         }
 
         // print out quantities in Ax = d to use in debugging
         // cout << endl << A << endl << d << endl << x << endl;
 
-        g.col(i-1) = x;
+        g.col(i-1) = d;
 
         // these two lines are inefficient and unnecessary -- find out how
         // to get rid of them
