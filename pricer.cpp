@@ -8,8 +8,8 @@
 
 using namespace std;
 
-float phi(float y);
-float bs(float values[]);
+double phi(double y);
+double bs(float values[]);
 float fdm(float values[]);
 
 int main()
@@ -50,29 +50,35 @@ int main()
     // close the parameters file
     options.close();
 
-    float price1 = bs(params);
+    if (pow(params[6],2) * params[5]/params[10] > pow(params[4]/params[9],2)) {
+        std::cerr << "Stability condition not satisfied. \n";
+        exit(1);
+    }
+
+    double price1 = bs(params);
     float price2 = fdm(params);
 
-    cout << price1 << ", " << price2 << endl;
+    cout << setprecision(10) << price1 << ", " << setprecision(10) <<
+        price2 << endl;
 
 }
 
 // compute option price using Black-Scholes formulas
-float bs(float values[])
+double bs(float values[])
 {
     // give the variables names that are easier to work with
     int CP = values[2];
-    float S = values[3];
-    float K = values[4];
-    float tau = values[5];
-    float sigma = values[6];
-    float r = values[7];
-    float a = values[8];
+    double S = (double)values[3];
+    double K = (double)values[4];
+    double tau = (double)values[5];
+    double sigma = (double)values[6];
+    double r = (double)values[7];
+    double a = (double)values[8];
 
     // declare the constants used in the B-S formula
-    float d1 = (1/(sigma*sqrt(tau)))*(log(S/K) + (r-a+(pow(sigma,2)/2))*tau);
-    float d2 = (1/(sigma*sqrt(tau)))*(log(S/K) + (r-a-(pow(sigma,2)/2))*tau);
-    float price;
+    double d1 = (1/(sigma*sqrt(tau)))*(log(S/K) + (r-a+(pow(sigma,2)/2))*tau);
+    double d2 = (1/(sigma*sqrt(tau)))*(log(S/K) + (r-a-(pow(sigma,2)/2))*tau);
+    double price;
 
     if (CP == 0) {
         price = S*exp(-a*tau)*phi(d1) - K*exp(-r*tau)*phi(d2);
@@ -230,15 +236,15 @@ float fdm(float values[])
 }
 
 // copied this directly from John Cook at https://www.johndcook.com/blog/cpp_phi/
-float phi(float x)
+double phi(double x)
 {
     // constants
-    float a1 =  0.254829592;
-    float a2 = -0.284496736;
-    float a3 =  1.421413741;
-    float a4 = -1.453152027;
-    float a5 =  1.061405429;
-    float p  =  0.3275911;
+    double a1 =  0.254829592;
+    double a2 = -0.284496736;
+    double a3 =  1.421413741;
+    double a4 = -1.453152027;
+    double a5 =  1.061405429;
+    double p  =  0.3275911;
 
     // Save the sign of x
     int sign = 1;
@@ -247,8 +253,8 @@ float phi(float x)
     x = fabs(x)/sqrt(2.0);
 
     // A&S formula 7.1.26
-    float t = 1.0/(1.0 + p*x);
-    float y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*exp(-x*x);
+    double t = 1.0/(1.0 + p*x);
+    double y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*exp(-x*x);
 
     return 0.5*(1.0 + sign*y);
 }
