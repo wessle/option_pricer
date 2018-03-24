@@ -3,10 +3,8 @@
 #include <cmath>
 #include <array>
 #include <iomanip>
-#include <Eigen/QR>
 
 using namespace std;
-using namespace Eigen;
 
 float phi(float y);
 float bs(float values[]);
@@ -125,25 +123,29 @@ float fdm(float values[])
     float t = T/N;
 
     // initialize the grid with all zeros
-    MatrixXf g(M+1, N+1);
-    g.setZero();
+    float g[M+1][N+1];
+    for (int i=0; i<M+1; i++) {
+        for (int j=0; j<N+1; j++) {
+            g[i][j] = 0;
+        }
+    }
 
     // set the boundary conditions corresponding to whether the option
     // is a call or put
     for (int i=0; i<N+1; i++) {
-        g(0, i) += (1-CP)*(Smax - K*exp(-(r-q)*(T-t*i)));
-        g(M, i) += CP*K*exp(-(r-q)*(T-t*i));
+        g[0][i] += (1-CP)*(Smax - K*exp(-(r-q)*(T-t*i)));
+        g[M][i] += CP*K*exp(-(r-q)*(T-t*i));
     }
 
     for (int i=1; i<M; i++) {
-        g(i, N) = (1-CP)*std::max((M-i)*s-K, (float)0.0) + CP*std::max(K-(M-i)*s, (float)0.0);
+        g[i][N] = (1-CP)*std::max((M-i)*s-K, (float)0.0) + CP*std::max(K-(M-i)*s, (float)0.0);
     }
 
     // make sure the row corresponding to the current price actually
     // contains the current price in the first column and the appropriate
     // intrinsic value in the last column
-    g(M - M/mult, 0) = S;
-    g(M - M/mult, N) = (1-CP)*std::max(S-K, (float)0.0) + CP*std::max(K-S, (float)0.0);
+    g[M - M/mult][0] = S;
+    g[M - M/mult][N] = (1-CP)*std::max(S-K, (float)0.0) + CP*std::max(K-S, (float)0.0);
 
     /* Here we update the grid column-by-column, moving right to left. We have
     to solve a system of linear equations for each column, but we can perform
@@ -152,70 +154,77 @@ float fdm(float values[])
     A = [B, b], where B is the square coefficient matrix and b is the vector
     of right-hand side values. We are solving to obtain x = B^{-1}b. */
 
-    MatrixXf A(M+1, M+1);
-    VectorXf d(M+1);
-    VectorXf x(M+1);
+    float A[M+1][M+1];
+    float d[M+1];
 
     for (int i=N; i>0; i--) {
 
-        // set A equal to identity
-        A = MatrixXf::Identity(M+1,M+1);
-        d = g.col(i);
-
-        for (int j=1; j<M; j++) {
-            A(j,j-1) = aj(j, M, sig, r, q, t);
-            A(j,j) = bj(j, M, sig, r, q, t);
-            A(j,j+1) = cj(j, M, sig, r, q, t);
+        // set A equal to zeros, d equal to RHS values from g
+        for (int j=0; j<M+1; j++) {
+            for (int k=0; k<M+1; k++) {
+                A[j][k] = 0;
+            }
         }
 
-        // fast solution of equation Ax=d using special structure of A
+        // after the first iteration this is inefficient, because d only
+        // differs from g[:][i] at its first and last entries
+        for (int j=0; j<M+1; j++) {
+            d[j] = g[j][i];
+        }
+
+        // populate A with the appropriate coefficients
+        for (int j=1; j<M; j++) {
+            A[j][j-1] = aj(j, M, sig, r, q, t);
+            A[j][j] = bj(j, M, sig, r, q, t);
+            A[j][j+1] = cj(j, M, sig, r, q, t);
+        }
+
+        // implement fast solution of equation Ax=d using special,
+        // sparse structure of A
         double a;
 
         // zero out the first column, which has only one other non-zero entry,
         // and update RHS accordingly
-        d(1) -= A(1,0)*d(0);
-        A(1,0) = 0;
+        d[1] -= A[1][0]*d[0];
+        A[1][0] = 0;
 
         // normalize i,i-th entry, zero out everything below it, update RHS
+        // we don't need to zero things out, because only the changes in b
+        // matter; we end up zeroing out A completely at the beginning of
+        // each iteration
         for (int j=1; j<M; j++) {
-            a = 1/A(j,j);
-            A(j,j) *= a;
-            A(j,j+1) *= a;
-            d(j) *= a;
+            a = 1/A[j][j];
+            A[j][j] *= a;
+            A[j][j+1] *= a;
+            d[j] *= a;
 
-            A(j+1,j+1) -= A(j+1,j)*A(j,j+1);
-            d(j+1) -= A(j+1,j)*d(j);
+            A[j+1][j+1] -= A[j+1][j]*A[j][j+1];
+            d[j+1] -= A[j+1][j]*d[j];
 
-            A(j+1,j) = 0;
+            A[j+1][j] = 0;
         }
 
         // start process over, this time zeroing out the entries above the diagonal
-        d(M-1) -= A(M-1,M)*d(M);
-        A(M-1,M) = 0;
+        d[M-1] -= A[M-1][M]*d[M];
+        A[M-1][M] = 0;
 
         // to obtain the correct b we don't need to set A(i-1,i)=0, but since
         // we are reusing A we might as well reset it to the identity
         for (int j=M-1; j>0; j--) {
-            d(j-1) -= A(j-1,j)*d(j);
-            A(j-1,j) = 0;
+            d[j-1] -= A[j-1][j]*d[j];
+            A[j-1][j] = 0;
         }
 
         for (int j=0; j<M+1; j++) {
-            d(j) = (1-CP)*std::max(d(j), EA*((M-j)*s - K)) + CP*(std::max(d(j), EA*(K-(M-j)*s)));
+            d[j] = (1-CP)*std::max(d[j], EA*((M-j)*s - K)) + CP*(std::max(d[j], EA*(K-(M-j)*s)));
         }
 
-        // print out quantities in Ax = d to use in debugging
-        // cout << endl << A << endl << d << endl << x << endl;
-
-        g.col(i-1) = d;
-
-        // these two lines are inefficient and unnecessary -- find out how
-        // to get rid of them
-        g(0, i-1) = (1-CP)*(Smax - K*exp(-(r-q)*(T-t*i)));
-        g(M, i-1) = CP*K*exp(-(r-q)*(T-t*i));
+        for (int j=1; j<M; j++) {
+            g[j][i-1] = d[j];
+        }
     }
 
-    return g(M - M/mult, 0);
+    return g[M - M/mult][0];
 }
 
 // copied this directly from John Cook at https://www.johndcook.com/blog/cpp_phi/
