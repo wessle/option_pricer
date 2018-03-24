@@ -1,8 +1,13 @@
+/* This version of the pricer reads in parameters from option_params.txt
+and outputs the parameters and the error between bs and fdm evaluated on them
+to errors.txt */
+
 #include <iostream>
 #include <fstream>
 #include <cmath>
 #include <array>
 #include <iomanip>
+#include <time.h>
 #include "pricer.h" // defines Matrix template to avoid seg fault
 // with large array dimensions
 
@@ -14,8 +19,10 @@ float fdm(float values[]);
 
 int main()
 {
+    clock_t t1, t2;
+    t1 = clock();
     // read in option parameters file
-    std::ifstream options;
+    ifstream options;
     options.open("option_params.txt");
 
     // check if file containing option parameters was read in successfully
@@ -24,7 +31,21 @@ int main()
         exit(1);
     }
 
-    /* read first seven elements of option_params into a vector
+    ofstream errors;
+    errors.open("errors.txt");
+
+    // check if errors.txt was opened successfully
+    if (!errors) {
+        std::cerr << "Unable to open errors.txt. \n";
+        exit(1);
+    }
+
+    float x;
+    float params[11];
+    double bsprice;
+    float fdmprice;
+
+    /* read first 11 elements of option_params into a vector;
     parameters are, in order:
     0) 0 for B-S, 1 for FDM
     1) 0 for European, 1 for American;
@@ -38,29 +59,40 @@ int main()
     9) number of price steps
     10) number of time steps */
 
-    float x;
-    float params[11];
+    // keep processing parameters until reaching end of option_params.txt
+    // IMPORTANT: option_params.txt must contain an asterisk immediately
+    // after the last number
+    while (options.peek() != '*') {
+        for (int i=0; i<11; i++)
+        {
+            options >> x;
+            params[i] = x;
+        }
 
-    for (int i=0; i<11; i++)
-    {
-        options >> x;
-        params[i] = x;
+        // need to change this so that, instead of exiting, it simply prints
+        // the parameters and a null character to errors.txt
+        if ((pow(params[6],2) * params[5]/params[10]) > pow(params[3]/params[9],2)) {
+            std::cerr << "Stability condition not satisfied. \n";
+            exit(1);
+        }
+
+        bsprice = bs(params);
+        fdmprice = fdm(params);
+
+        for (int i=0; i<11; i++) {
+            errors << params[i] << ", ";
+        }
+
+        errors << abs(bsprice - (double)fdmprice) << ",\n";
     }
 
-    // close the parameters file
+    // close input and output files
+    errors.close();
     options.close();
 
-    if (pow(params[6],2) * params[5]/params[10] > pow(params[4]/params[9],2)) {
-        std::cerr << "Stability condition not satisfied. \n";
-        exit(1);
-    }
-
-    double price1 = bs(params);
-    float price2 = fdm(params);
-
-    cout << setprecision(10) << price1 << ", " << setprecision(10) <<
-        price2 << endl;
-
+    t2 = clock();
+    cout << "Runtime: " << ((float)t2 - (float)t1)/CLOCKS_PER_SEC << "s" << endl;
+    return 0;
 }
 
 // compute option price using Black-Scholes formulas
