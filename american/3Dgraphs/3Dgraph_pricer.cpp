@@ -7,7 +7,7 @@ and prints them to separate text files */
 #include <array>
 #include <iomanip>
 #include <time.h>
-#include "pricer.h" // defines Matrix template to avoid seg fault
+#include "3Dgraph_pricer.h" // defines Matrix template to avoid seg fault
 // with large array dimensions
 
 using namespace std;
@@ -51,7 +51,7 @@ int main()
     Matrix<float> put = fdm(params);
     for (int i=0; i<500; i++) {
         for (int j=0; j<500; j++) {
-            put_grid << call(i, j) << ", ";
+            put_grid << put(i, j) << ", ";
         }
         put_grid << "\n";
     }

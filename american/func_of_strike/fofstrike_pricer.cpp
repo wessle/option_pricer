@@ -62,7 +62,7 @@ int main()
     params[2] = 1;
 
     for (int i=0; i<100; i++) {
-        params[5] = stri[i];
+        params[4] = stri[i];
         price = fdm(params);
         put_prices << stri[i] << ", " << price << "\n";
     }
