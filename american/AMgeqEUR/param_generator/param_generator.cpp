@@ -1,3 +1,5 @@
+// generate parameters for the test to check that American option prices
+// are greater than corresponding European ones
 #include <iostream>
 #include <fstream>
 #include "lcgrand.h"
@@ -19,20 +21,6 @@ int main() {
     9) number of price steps
     10) number of time steps */
 
-    // open grid dimensions textfile and copy it into an array
-    ifstream grid_dims;
-    grid_dims.open("grid_dimensions.txt");
-
-    if (!grid_dims) {
-        std::cerr << "Unable to open grid_dimensions.txt. \n";
-        exit(1);
-    }
-
-    int dimension[50];
-    for (int k=0; k<50; k++) {
-        grid_dims >> dimension[k];
-    }
-
     ofstream options;
     options.open("option_params.txt");
 
@@ -43,7 +31,8 @@ int main() {
 
     float S, K, T, sig, r, q;
     int M, N, seed = 2;
-    int ops = 50; // number of options to generate
+    int ops = 100; // number of options to generate
+    int dim = 500; // grid dimensions to use
 
     for (int i=0; i<ops; i++) {
         S = 20 + 400*lcgrand(seed); // generate current underlying price
@@ -54,26 +43,25 @@ int main() {
         r = 0.01 + 0.19*lcgrand(seed); // risk-free rate between 0.01 and 0.2
         q = r*lcgrand(seed); // dividend rate between 0 and r
 
-        for (int k=0; k<50; k++) {
-            M = dimension[k]; N = dimension[k];
+        for (int j=0; j<2; j++) {
             options << 0 << " " // BS, FDM designator; not used at the moment
-                << 0 << " " // European
-                << 0 << " " // 0 for call, 1 for put
-                << S << " " // current price
-                << K << " " // strike
-                << T << " " // expiry
-                << sig << " " // volatility
-                << r << " " // risk-free rate
-                << q << " " // dividend rate
-                << M << " " // number of price steps
-                << N; // number of time steps
+            << 1 << " " // 0 for European, 1 for American
+            << j << " " // 0 for call, 1 for put
+            << S << " " // current price
+            << K << " " // strike
+            << T << " " // expiry
+            << sig << " " // volatility
+            << r << " " // risk-free rate
+            << q << " " // dividend rate
+            << dim << " " // number of price steps
+            << dim; // number of time steps
 
-                if (i==ops-1 & k==49) {
-                    options << "*";
-                }
-                else {
-                    options << "\n";
-                }
+            if (i==ops-1 & j==1) {
+                options << "*";
+            }
+            else {
+                options << "\n";
+            }
         }
     }
 
