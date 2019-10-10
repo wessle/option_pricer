@@ -8,5 +8,3 @@ To take a peak at the main elements of the pricing engine, check out pricer.cpp.
 If you want to compile pricer.cpp, you must compile it with pricer.h. Most C++ files in the subdirectories are versions of pricer.cpp -- they generally must be compiled with their corresponding pricer.h versions.
 
 All C++ files were compiled with C++11 as standard.
-
-Wes Suttle at Stony Brook University, spring 2018. 
